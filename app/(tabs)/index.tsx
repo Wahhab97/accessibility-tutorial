@@ -1,75 +1,145 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { FontAwesome } from "@expo/vector-icons";
+import { useState } from "react";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { styles } from "./styles";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+type Item = { value: string; id: number; done: boolean };
 
 export default function HomeScreen() {
+  const [tasks, setTasks] = useState<Item[]>([]);
+  const [value, setValue] = useState("");
+  const [editingValue, setEditingValue] = useState("");
+  const [editing, setEditing] = useState<null | Item>(null);
+  const addTask = () => {
+    if (!value.trim().length) return;
+    setTasks((prev) => [...prev, { id: Math.random(), value, done: false }]);
+    setValue("");
+  };
+  const removeItem = (pressedItem: Item) => {
+    setTasks((prev) => {
+      return prev.filter((item) => item.id !== pressedItem.id);
+    });
+  };
+  const editItemModal = (item: Item) => {
+    setEditingValue(item.value);
+    setEditing(item);
+  };
+  const closeModal = () => {
+    setEditing(null);
+    setEditingValue("");
+  };
+  const confirmEdit = () => {
+    if (!editingValue.trim().length) {
+    } else {
+      setTasks((prev) => {
+        const tempA = [...prev];
+        const tempItem = tempA.find((item) => item.id === editing?.id);
+        tempItem!.value = editingValue;
+        return [...tempA];
+      });
+    }
+    closeModal();
+  };
+  const toggleDone = (toggledElement: Item) => {
+    setTasks(prev => {
+      const temp = prev.map((item) => item.id === toggledElement.id ? {...item, done: !item.done} : item)
+      return [...temp];
+    })
+  };
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <SafeAreaView style={styles.flex1}>
+      <View style={styles.header}>
+        <Text style={styles.headerText}>To-Do List (No A11Y)</Text>
+      </View>
+      <ScrollView>
+        <TextInput
+          style={[styles.general, styles.input]}
+          placeholder="add a task"
+          onChangeText={setValue}
+          value={value}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        <Pressable
+          onPress={addTask}
+          style={({ pressed }) => [
+            styles.general,
+            styles.button,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={styles.buttonText}>Add Task</Text>
+        </Pressable>
+
+        <View style={[styles.general, styles.list]}>
+          {tasks.map((item) => (
+            <Pressable
+              onPress={() => toggleDone(item)}
+              style={({ pressed }) => [
+                styles.listItem,
+                pressed && styles.pressed,
+              ]}
+              key={item.id}
+            >
+              <Text style={item.done && {textDecorationLine: 'line-through'}}>{item.value}</Text>
+              <View style={styles.actions}>
+                <Pressable
+                  onPress={() => editItemModal(item)}
+                  style={({ pressed }) => [
+                    styles.button,
+                    styles.editButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <FontAwesome name="edit" color="black" size={26} />
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.button,
+                    styles.deleteButton,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() => removeItem(item)}
+                >
+                  <FontAwesome name="remove" color="white" size={26} />
+                </Pressable>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      </ScrollView>
+      <Modal visible={!!editing} transparent>
+        <Pressable onPress={closeModal} style={styles.modal}>
+          <View style={styles.modalContent}>
+            <Text style={{ textAlign: "center" }}>Edit Item</Text>
+            <TextInput
+              style={[styles.general, styles.input]}
+              placeholder="edit the task"
+              onChangeText={setEditingValue}
+              value={editingValue}
+            />
+            <Pressable
+              onPress={confirmEdit}
+              style={({ pressed }) => [
+                styles.general,
+                styles.button,
+                styles.editButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.buttonText, { color: "black" }]}>
+                Confirm Edit
+              </Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
